@@ -14,9 +14,11 @@
   "dependencies": {
     "@gradio/client": "^1.15.5",
     "@huggingface/inference": "^4.5.1",
+    "body-parser": "^2.2.0",
     "cohere": "^1.1.1",
     "cohere-ai": "^7.17.1",
     "cors": "^2.8.5",
+    "express": "^5.1.0",
     "multer": "^2.0.2",
     "node-fetch": "^3.3.2",
     "openai": "^5.9.2",
