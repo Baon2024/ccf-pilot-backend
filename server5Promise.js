@@ -23,7 +23,7 @@ const openai = new OpenAI({
 
 
 // Allow only frontend origin
-app.use(cors({ origin: 'http://localhost:3001'}));//change to public url
+app.use(cors({ origin: 'https://ccf-pilot-frontend-xmcz.vercel.app'}));//change to public url
 app.use(bodyParser.json());
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
