@@ -22,7 +22,7 @@ const openai = new OpenAI({
 });
 
 
-let frontendURL = process.env.FRONTEND_URL ? "https://ccf-pilot-frontend-xmcz.vercel.app" : "http://localhost:3001/"
+let frontendURL = process.env.FRONTEND_URL ? process.env.FRONTEND_URL : "http://localhost:3001/"
 console.log("frontendURL is ", frontendURL)
 
 
