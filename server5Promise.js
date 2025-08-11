@@ -22,8 +22,12 @@ const openai = new OpenAI({
 });
 
 
+let frontendURL = process.env.FRONTEND_URL ? "https://ccf-pilot-frontend-xmcz.vercel.app" : "http://localhost:3001/"
+console.log("frontendURL is ", frontendURL)
+
+
 // Allow only frontend origin
-app.use(cors({ origin: 'https://ccf-pilot-frontend-xmcz.vercel.app'}));//change to public url
+app.use(cors({ origin: frontendURL }));//change to public url
 app.use(bodyParser.json());
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
