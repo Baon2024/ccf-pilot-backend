@@ -27,7 +27,7 @@ console.log("frontendURL is ", frontendURL)
 
 
 // Allow only frontend origin
-app.use(cors({ origin: ['https://ccf-pilot-frontend-xmcz.vercel.app', "http://localhost:3001", 'https://core-collectif-web-app.vercel.app/'] }));//change to public url
+app.use(cors({ origin: ['https://ccf-pilot-frontend-xmcz.vercel.app', "http://localhost:3001", 'https://core-collectif-web-app.vercel.app'] }));//change to public url
 app.use(bodyParser.json());
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
