@@ -716,7 +716,7 @@ const visionResponseColor = await openai.chat.completions.create({
       content: [
         {
           type: "text",
-          text: "suggest colors that would work well with this logo design for the artist"
+          text: "suggest captions that could go with the visual media design for the artist"
         },
         {
           type: "image_url",
