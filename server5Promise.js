@@ -42,6 +42,7 @@ const upload = multer({ dest: "uploads/" });
 
 
 
+
 app.post("/pressRelease", upload.fields([{ name: "albumArtFiles", maxCount: 10 }, { name: "artistProfilePhotoFiles", maxCount: 10 },]), async (req, res) => {
 
 res.setHeader('Content-Type', 'text/event-stream');
@@ -65,7 +66,7 @@ res.setHeader('Content-Type', 'text/event-stream');
   console.log("Album Art Files:", req.files.albumArtFiles); // array
     console.log("Press Photos Files:", req.files.artistProfilePhotoFiles); // array
 
-  let { name, email, genre, targetAudience, socialPrescence, uniqueAngles, artistPersonalQuote, offstageDetailOrCause, primaryContactEmail, additionalLinks, keyInfluences, biggestMilestones, noticeablePress, upcomingDates, websiteUrl, trackList } = req.body;
+  let { name, email = "none provided", genre, targetAudience, socialPrescence, uniqueAngles, artistPersonalQuote, offstageDetailOrCause, primaryContactEmail = "none provided", additionalLinks, keyInfluences, biggestMilestones, noticeablePress, upcomingDates, websiteUrl, trackList, releaseType } = req.body;
 
 console.log("name:", name);
 console.log("email:", email);
@@ -83,6 +84,7 @@ console.log("noticeablePress:", noticeablePress);
 console.log("upcomingDates:", upcomingDates);
 console.log("websiteUrl:", websiteUrl);
 console.log("trackList:", trackList);
+console.log("releaseType:", releaseType);
 
 let artistProfilePhotoFilesList = []
   let albumArtFilesList = []
@@ -179,7 +181,9 @@ console.log("🖼️ The length of Vision insight for logo context is:", visionD
   Key Influences: ${keyInfluences},
   Biggest Milestones: ${biggestMilestones},
   Noticeable Press: ${noticeablePress}.
-  Upcoming Dates: ${upcomingDates},`
+  Upcoming Dates: ${upcomingDates},
+  Release Type: ${releaseType}
+  `
 
 let pressReleasePromptChatGpt2 = `
 You are a professional music industry press release writer. Draft a high-quality press release for the artist **${name}**, using the following details:  
@@ -258,7 +262,7 @@ app.post("/fonts", upload.fields([{ name: "albumArtFiles", maxCount: 10 }, { nam
   console.log("Album Art Files:", req.files.albumArtFiles); // array
     console.log("Press Photos Files:", req.files.artistProfilePhotoFiles); // array
 
-  let { name, email, genre, targetAudience, socialPrescence, uniqueAngles, artistPersonalQuote, offstageDetailOrCause, primaryContactEmail, additionalLinks, keyInfluences, biggestMilestones, noticeablePress, upcomingDates, websiteUrl, trackList } = req.body;
+  let { name, email = "none provided", genre, targetAudience, socialPrescence, uniqueAngles, artistPersonalQuote, offstageDetailOrCause, primaryContactEmail = "none provided", additionalLinks, keyInfluences, biggestMilestones, noticeablePress, upcomingDates, websiteUrl, trackList } = req.body;
 
 console.log("name:", name);
 console.log("email:", email);
@@ -453,7 +457,7 @@ app.post("/logos", upload.fields([{ name: "albumArtFiles", maxCount: 10 }, { nam
   console.log("Album Art Files:", req.files.albumArtFiles); // array
     console.log("Press Photos Files:", req.files.artistProfilePhotoFiles); // array
 
-  let { name, email, genre, targetAudience, socialPrescence, uniqueAngles, artistPersonalQuote, offstageDetailOrCause, primaryContactEmail, additionalLinks, keyInfluences, biggestMilestones, noticeablePress, upcomingDates, websiteUrl, trackList } = req.body;
+  let { name, email = "none provided", genre, targetAudience, socialPrescence, uniqueAngles, artistPersonalQuote, offstageDetailOrCause, primaryContactEmail = "none provided", additionalLinks, keyInfluences, biggestMilestones, noticeablePress, upcomingDates, websiteUrl, trackList } = req.body;
 
 console.log("name:", name);
 console.log("email:", email);
@@ -766,7 +770,7 @@ app.post("/keywords", upload.fields([{ name: "albumArtFiles", maxCount: 10 }, { 
   console.log("Album Art Files:", req.files.albumArtFiles); // array
     console.log("Press Photos Files:", req.files.artistProfilePhotoFiles); // array
 
-  let { name, email, genre, targetAudience, socialPrescence, uniqueAngles, artistPersonalQuote, offstageDetailOrCause, primaryContactEmail, additionalLinks, keyInfluences, biggestMilestones, noticeablePress, upcomingDates, websiteUrl, trackList } = req.body;
+  let { name, email = "none provided", genre, targetAudience, socialPrescence, uniqueAngles, artistPersonalQuote, offstageDetailOrCause, primaryContactEmail = "none provided", additionalLinks, keyInfluences, biggestMilestones, noticeablePress, upcomingDates, websiteUrl, trackList } = req.body;
 
 console.log("name:", name);
 console.log("email:", email);
@@ -938,6 +942,9 @@ app.post("/EDK", upload.fields([
 
 
 })
+
+
+app.listen(PORT, () => console.log(`✅ Server running on http://localhost:${PORT}`));
 
 
 app.listen(PORT, () => console.log(`✅ Server running on http://localhost:${PORT}`));
