@@ -10,6 +10,8 @@ import path from 'path'
 import fs from 'fs'
 import { fontCatalog } from './fonts.js';
 import { PassThrough } from 'stream';
+import { z } from "zod";
+import { zodTextFormat } from 'openai/helpers/zod.mjs';
 
 const app = express();
 const PORT = 5001;
@@ -806,43 +808,74 @@ console.log("trackList:", trackList);
 
     // Prepare prompt
     //let keyWordsPhrasesPrompt = `You need to generate key words and/or phrases ...`;
-    let keyWordsPhrasesPrompt = `You need to generate key words and/or phrases to describe ${name}.
+    let keyWordsPhrasesPrompt = `
+You are generating social media hashtags for an artist.
 
-Return in the form of an Array, with each phrase or keyword as a seperate entry. For example: ["great singer", "nice songs"]
+Artist: ${name}
 
+Use ONLY these details as grounding to create relevant, specific, non-generic hashtags:
+- Genre: ${genre}
+- Target Audience: ${targetAudience}
+- Social Presence / Platforms: ${socialPrescence}
+- Unique Angles / Differentiators: ${uniqueAngles}
+- Artist Personal Quote / Brand Voice: ${artistPersonalQuote}
+- Key Influences: ${keyInfluences}
+- Biggest Milestones: ${biggestMilestones}
+- Noticeable Press: ${noticeablePress}
+- Upcoming Dates / Events: ${upcomingDates}
 
+TASK:
+Generate 15–25 hashtags that would realistically help this artist reach their audience.
+Rules:
+1. Every item MUST start with "#".
+2. Prefer specific, artist-unique or scene-accurate tags over generic ones.
+3. Mix sizes: 
+   - 5–8 broad discovery tags (genre/scene)
+   - 5–8 mid-specificity community tags (audience, vibe, influences)
+   - 3–6 highly specific tags (unique angles, milestones, upcoming dates, press hooks)
+4. If upcoming dates include cities, venues, tour names, festivals, or releases, create relevant event/location hashtags.
+5. Avoid repeating the same meaning with different spelling.
+6. No spaces, no punctuation besides letters/numbers/underscore.
+7. Do not invent facts; if a detail isn't present, don't tag it.
+8. Output ONLY a valid JSON Array of strings. No extra text.
 
-You should use the info from the folowing in order to do so: Genre: ${genre},
-  Target Audience: ${targetAudience},
-  Social Prescence: ${socialPrescence},
-  Unique Angles: ${uniqueAngles},
-  Artist Personal Quote: ${artistPersonalQuote},
-  Key Influences: ${keyInfluences},
-  Biggest Milestones: ${biggestMilestones},
-  Noticeable Press: ${noticeablePress}.
-  Upcoming Dates: ${upcomingDates},
-..
-
-`
+Example format:
+["#AltPop", "#LondonGig", "#IndieForYou"]
+`;
 
     const truncatedKeyWordsPhrasesPrompt = keyWordsPhrasesPrompt.length > 1000
       ? keyWordsPhrasesPrompt.slice(0, 997) + "..."
       : keyWordsPhrasesPrompt;
+    
+    // Top-level object, with array inside
+const hashtagsSchema = z.object({
+  hashtags: z.array(
+    z.string().describe("A specific hashtag starting with #, no spaces")
+  )
+});
 
-    const openaikeyWordsPhrases = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [{ role: "user", content: truncatedKeyWordsPhrasesPrompt }],
-      temperature: 0.7,
-      max_tokens: 500,
-    });
+    const openaikeyWordsPhrases = await openai.responses.parse({
+  model: "gpt-5.1",
+  input: [{ role: "user", content: truncatedKeyWordsPhrasesPrompt }],
+  temperature: 0.7,
+  max_output_tokens: 500,
+  text: {
+    format: zodTextFormat(hashtagsSchema, "hashtags_array")
+  }
+});
 
-    const openaikeyWordsPhrasesAnswer = openaikeyWordsPhrases.choices[0].message.content;
-    console.log("✅ openaikeyWordsPhrasesAnswer:", openaikeyWordsPhrasesAnswer);
+    //const openaikeyWordsPhrasesAnswer = openaikeyWordsPhrases.choices[0].message.content;
+    const response = openaikeyWordsPhrases.output_parsed
+    console.log("response before parsing hastags response: ", response)
+    
+    const hastags = response.hashtags
+    console.log("hashtags are: ", hastags)
+    //console.log("✅ openaikeyWordsPhrasesAnswer:", openaikeyWordsPhrasesAnswer);
 
-    let openaiKeyWordsPhrasesAnswer = JSON.parse(openaikeyWordsPhrasesAnswer);
+    //let openaiKeyWordsPhrasesAnswer = JSON.parse(openaikeyWordsPhrasesAnswer);
 
     //passThrough.write(`data: keyWordsPhrases: ${JSON.stringify(openaiKeyWordsPhrasesAnswer)}\n\n`);
-    passThrough.write(`keyWordsPhrases: ${JSON.stringify(openaiKeyWordsPhrasesAnswer)}\n\n`);
+    passThrough.write(`keyWordsPhrases: ${JSON.stringify(hastags)}\n\n`);
     passThrough.end();
 
   } catch (error) {
