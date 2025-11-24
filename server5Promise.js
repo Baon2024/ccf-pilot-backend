@@ -68,6 +68,9 @@ res.setHeader('Content-Type', 'text/event-stream');
 
   let { name, email = "none provided", genre, targetAudience, socialPrescence, uniqueAngles, artistPersonalQuote, offstageDetailOrCause, primaryContactEmail = "none provided", additionalLinks, keyInfluences, biggestMilestones, noticeablePress, upcomingDates, websiteUrl, trackList, releaseType } = req.body;
 
+  let feedback = req.body?.userFeedback
+  console.log("value of feedback from user is: ", feedback);
+
 console.log("name:", name);
 console.log("email:", email);
 console.log("genre:", genre);
@@ -206,7 +209,9 @@ Return the result as a JSON object with this structure:
 - Each field must contain **exactly one paragraph**. No line breaks or multiple paragraphs.  
 - Do NOT include any section labels, emojis, or decorative symbols in the text itself.  
 - Write in a professional, polished, press-release tone.  
-- Only use information from ${artistDetail}. If information for a section is missing, return an empty string for that key.  
+- Only use information from ${artistDetail}. If information for a section is missing, return an empty string for that key.
+
+ ${feedback ? `This is feedback from your report comissioner from a prior attempt: ${feedback}`: "" }
 
 ⚠️ Return **only the JSON object**, nothing else.
 `;
