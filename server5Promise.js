@@ -219,16 +219,23 @@ Return the result as a JSON object with this structure:
   
 
     //2 alt - openai press release generation
-    const openaiPressRelease = await openai.chat.completions.create({
-      model: "gpt-4", // or "gpt-3.5-turbo"
+    /*const openaiPressRelease = await openai.chat.completions.create({
+      model: "gpt-5", // or "gpt-3.5-turbo"
       messages: [
         { role: "user", content: pressReleasePromptChatGpt2}
     ],
       temperature: 0.7,
-      max_tokens: 1000,
-    });
+      max_completion_tokens: 2000,
+    });*/
 
-    const openaiPressReleaseVersion = openaiPressRelease.choices[0].message.content;
+    const openaiPressRelease = await openai.responses.create({
+  model: "gpt-5-nano",
+  input: [
+    { role: "user", content: pressReleasePromptChatGpt2 }
+  ],
+});
+
+    const openaiPressReleaseVersion = /*openaiPressRelease.choices[0].message.content;*/ openaiPressRelease.output_text;
     console.log("✅ openaiPressRelease alternative generated from openai:", openaiPressReleaseVersion);
 
     //Press release successfully generated!!
