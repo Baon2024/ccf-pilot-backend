@@ -60,13 +60,17 @@ res.setHeader('Content-Type', 'text/event-stream');
     passThrough.write('data: Pdf pipeline is open!!\n\n');
 
 
+    let visionDescriptionForLogo = "" //set here as empty, will be updated if files are sent by user, otherwise left empty
 
+    console.log('Files:', req?.files);         // array of uploaded files
+    console.log('Text fields:', req.body);
 
-    console.log('Files:', req.files);         // array of uploaded files
-  console.log('Text fields:', req.body);
+    console.log("Album Art Files:", req?.files?.albumArtFiles); // array
+    console.log("Press Photos Files:", req?.files?.artistProfilePhotoFiles); // array
 
-  console.log("Album Art Files:", req.files.albumArtFiles); // array
-    console.log("Press Photos Files:", req.files.artistProfilePhotoFiles); // array
+    if (!req?.files?.albumArtFiles || !req?.files?.artistProfilePhotoFiles) {
+      console.log("either albumArtFiles or artistPressPhotoFiles were not sent by the user!")
+    }
 
   let { name, email = "none provided", genre, targetAudience, socialPrescence, uniqueAngles, artistPersonalQuote, offstageDetailOrCause, primaryContactEmail = "none provided", additionalLinks, keyInfluences, biggestMilestones, noticeablePress, upcomingDates, websiteUrl, trackList, releaseType } = req.body;
 
@@ -91,57 +95,57 @@ console.log("websiteUrl:", websiteUrl);
 console.log("trackList:", trackList);
 console.log("releaseType:", releaseType);
 
-let artistProfilePhotoFilesList = []
+if (req?.files?.albumArtFiles || req?.files?.artistProfilePhotoFiles) {
+
+  console.log("either albumArtFiles or artistProfilePhotoFiles exist and have been sent by user, so will now start workflow to extract insight..")
+  
+  let artistProfilePhotoFilesList = []
   let albumArtFilesList = []
 
-  for (const file of req.files.albumArtFiles) {
+  if (req?.files?.albumArtFiles) {
+    for (const file of req.files.albumArtFiles) {
     albumArtFilesList.push(file)
   }
+  console.log("albumArtFilesList is: ", albumArtFilesList);
+  }
 
-  for (const file of req.files.artistProfilePhotoFiles) {
+  if (req?.files?.artistProfilePhotoFiles) {
+    for (const file of req.files.artistProfilePhotoFiles) {
     artistProfilePhotoFilesList.push(file)
   }
-
-  console.log("albumArtFilesList is: ", albumArtFilesList);
   console.log("artistProfilePhotoFilesList is: ", artistProfilePhotoFilesList)
+  }
+  
 
   
 
-  //let formattedTestTrackList = testTrackList.map((title, index) => `Track ${index}: ${title}`).join('\n')
-  if (typeof trackList === 'string') {
-    trackList = JSON.parse(trackList);
-  }
-  let formattedTrackList = trackList.map((title, index) => `Track ${index}: ${title}`).join('\n')
-
-
-
-  console.log("value of formattedTrackList is: ", formattedTrackList)
-
-
-  //1 - extracting image from frontend sent
   
-  //add extraction of album art and artist profile pic
 
-  if (!albumArtFilesList && artistProfilePhotoFilesList) {
-    throw new Error("No uploaded albumArtFiles or artistProfilePhotoFiles found.");
-  }
+  
 
-  //const base64Image = fs.readFileSync(uploadedImagePath, { encoding: 'base64' });
+
+  
 
   let base64ImageURLCollection = []
-
+  
+  if (req?.files?.artistProfilePhotoFiles) {
   artistProfilePhotoFilesList.forEach((file) => {
     let base64Image = fs.readFileSync(file.path, { encoding: 'base64' });
     base64ImageURLCollection.push(`data:image/jpeg;base64,${base64Image}`)
   })
-
+}
+  if (req?.files?.albumArtFiles) {
   albumArtFilesList.forEach((file) => {
     let base64Image = fs.readFileSync(file.path, { encoding: 'base64' });
     base64ImageURLCollection.push(`data:image/jpeg;base64,${base64Image}`)
   })
+  }
 
   console.log("value of base64ImageURLCollection is: ", base64ImageURLCollection);
-
+  console.log(`${req?.files?.artistProfilePhotoFiles ? "artistProfilePhotoFiles exist, therefore in base64ImageURLCollection": "artistProfilePhotoFiles not provided, therefore not in base64ImageURLCollection"}`)
+  console.log(`${req?.files?.artistProfilePhotoFiles ? "albumArtFiles exist, therefore in base64ImageURLCollection": "albumArtFiles not provided, therefore not in base64ImageURLCollection"}`)
+  
+  
   // Construct the OpenAI message content array
 const imageContentArray = base64ImageURLCollection.map((url) => ({
   type: "image_url",
@@ -172,11 +176,22 @@ imageContentArray.unshift({
   max_tokens: 300
 });
 
-const visionDescriptionForLogo = visionResponse.choices[0].message.content;
+visionDescriptionForLogo = visionResponse.choices[0].message.content;
 console.log("🖼️ Vision insight for logo context:", visionDescriptionForLogo);
 console.log("🖼️ The length of Vision insight for logo context is:", visionDescriptionForLogo.length)
 
+}
+
  //1 - Press Release Prompt and LLM Call
+ //let formattedTestTrackList = testTrackList.map((title, index) => `Track ${index}: ${title}`).join('\n')
+  if (typeof trackList === 'string') {
+    trackList = JSON.parse(trackList);
+  }
+  let formattedTrackList = trackList.map((title, index) => `Track ${index}: ${title}`).join('\n')
+
+
+
+  console.log("value of formattedTrackList is: ", formattedTrackList)
 
   let artistDetail = `Genre: ${genre},
   Target Audience: ${targetAudience},
@@ -188,6 +203,7 @@ console.log("🖼️ The length of Vision insight for logo context is:", visionD
   Noticeable Press: ${noticeablePress}.
   Upcoming Dates: ${upcomingDates},
   Release Type: ${releaseType}
+  ${(req?.files?.albumArtFiles || req?.files?.artistProfilePhotoFiles) ? `and info from images provided by artist is: ${visionDescriptionForLogo}`: ""}
   `
 
 let pressReleasePromptChatGpt2 = `
@@ -246,7 +262,7 @@ Return the result as a JSON object with this structure:
     console.log("✅ openaiPressRelease alternative generated from openai:", openaiPressReleaseVersion);
 
     //Press release successfully generated!!
-     passThrough.write(`pressRelease: ${openaiPressReleaseVersion}\n\n`); //return pressRelease to frontend once finished
+    passThrough.write(`pressRelease: ${openaiPressReleaseVersion}\n\n`); //return pressRelease to frontend once finished
     passThrough.end()
 
 })
@@ -270,11 +286,11 @@ app.post("/fonts", upload.fields([{ name: "albumArtFiles", maxCount: 10 }, { nam
 
 
 
-    console.log('Files:', req.files);         // array of uploaded files
-  console.log('Text fields:', req.body);
+    console.log('Files:', req?.files);         // array of uploaded files
+  console.log('Text fields:', req?.body);
 
-  console.log("Album Art Files:", req.files.albumArtFiles); // array
-    console.log("Press Photos Files:", req.files.artistProfilePhotoFiles); // array
+  console.log("Album Art Files:", req?.files?.albumArtFiles); // array
+    console.log("Press Photos Files:", req?.files?.artistProfilePhotoFiles); // array
 
   let { name, email = "none provided", genre, targetAudience, socialPrescence, uniqueAngles, artistPersonalQuote, offstageDetailOrCause, primaryContactEmail = "none provided", additionalLinks, keyInfluences, biggestMilestones, noticeablePress, upcomingDates, websiteUrl, trackList } = req.body;
 
@@ -295,57 +311,59 @@ console.log("upcomingDates:", upcomingDates);
 console.log("websiteUrl:", websiteUrl);
 console.log("trackList:", trackList);
 
-let artistProfilePhotoFilesList = []
+let visionDescriptionForLogo = ""
+
+  if (req?.files?.albumArtFiles || req?.files?.artistProfilePhotoFiles) {
+
+  console.log("either albumArtFiles or artistProfilePhotoFiles exist and have been sent by user, so will now start workflow to extract insight..")
+  
+  let artistProfilePhotoFilesList = []
   let albumArtFilesList = []
 
-  for (const file of req.files.albumArtFiles) {
+  if (req?.files?.albumArtFiles) {
+    for (const file of req.files.albumArtFiles) {
     albumArtFilesList.push(file)
   }
+  console.log("albumArtFilesList is: ", albumArtFilesList);
+  }
 
-  for (const file of req.files.artistProfilePhotoFiles) {
+  if (req?.files?.artistProfilePhotoFiles) {
+    for (const file of req.files.artistProfilePhotoFiles) {
     artistProfilePhotoFilesList.push(file)
   }
-
-  console.log("albumArtFilesList is: ", albumArtFilesList);
   console.log("artistProfilePhotoFilesList is: ", artistProfilePhotoFilesList)
+  }
+  
 
   
 
-  //let formattedTestTrackList = testTrackList.map((title, index) => `Track ${index}: ${title}`).join('\n')
-  if (typeof trackList === 'string') {
-    trackList = JSON.parse(trackList);
-  }
-  let formattedTrackList = trackList.map((title, index) => `Track ${index}: ${title}`).join('\n')
-
-
-
-  console.log("value of formattedTrackList is: ", formattedTrackList)
-
-
-  //1 - extracting image from frontend sent
   
-  //add extraction of album art and artist profile pic
 
-  if (!albumArtFilesList && artistProfilePhotoFilesList) {
-    throw new Error("No uploaded albumArtFiles or artistProfilePhotoFiles found.");
-  }
+  
 
-  //const base64Image = fs.readFileSync(uploadedImagePath, { encoding: 'base64' });
+
+  
 
   let base64ImageURLCollection = []
-
+  
+  if (req?.files?.artistProfilePhotoFiles) {
   artistProfilePhotoFilesList.forEach((file) => {
     let base64Image = fs.readFileSync(file.path, { encoding: 'base64' });
     base64ImageURLCollection.push(`data:image/jpeg;base64,${base64Image}`)
   })
-
+}
+  if (req?.files?.albumArtFiles) {
   albumArtFilesList.forEach((file) => {
     let base64Image = fs.readFileSync(file.path, { encoding: 'base64' });
     base64ImageURLCollection.push(`data:image/jpeg;base64,${base64Image}`)
   })
+  }
 
   console.log("value of base64ImageURLCollection is: ", base64ImageURLCollection);
-
+  console.log(`${req?.files?.artistProfilePhotoFiles ? "artistProfilePhotoFiles exist, therefore in base64ImageURLCollection": "artistProfilePhotoFiles not provided, therefore not in base64ImageURLCollection"}`)
+  console.log(`${req?.files?.artistProfilePhotoFiles ? "albumArtFiles exist, therefore in base64ImageURLCollection": "albumArtFiles not provided, therefore not in base64ImageURLCollection"}`)
+  
+  
   // Construct the OpenAI message content array
 const imageContentArray = base64ImageURLCollection.map((url) => ({
   type: "image_url",
@@ -376,9 +394,23 @@ imageContentArray.unshift({
   max_tokens: 300
 });
 
-const visionDescriptionForLogo = visionResponse.choices[0].message.content;
+visionDescriptionForLogo = visionResponse.choices[0].message.content;
 console.log("🖼️ Vision insight for logo context:", visionDescriptionForLogo);
 console.log("🖼️ The length of Vision insight for logo context is:", visionDescriptionForLogo.length)
+
+}
+
+
+  
+//let formattedTestTrackList = testTrackList.map((title, index) => `Track ${index}: ${title}`).join('\n')
+  if (typeof trackList === 'string') {
+    trackList = JSON.parse(trackList);
+  }
+  let formattedTrackList = trackList.map((title, index) => `Track ${index}: ${title}`).join('\n')
+
+
+
+  console.log("value of formattedTrackList is: ", formattedTrackList)
 
 
 function serializeFontCatalog(fontCatalog) {
@@ -406,6 +438,8 @@ let fontPrompt = `Using the following information, recomened a font to be used f
   Noticeable Press: ${noticeablePress}.
   Upcoming Dates: ${upcomingDates},
   Image Description: ${visionDescriptionForLogo}
+  ${(req?.files?.albumArtFiles || req?.files?.artistProfilePhotoFiles) ? `and info from images provided by artist is: ${visionDescriptionForLogo}`: ""}
+  
 .
 
 The font should be one chosen from the following: ${serializeFontCatalog(fontCatalog)}. return your answer in the following format:
@@ -465,11 +499,11 @@ app.post("/logos", upload.fields([{ name: "albumArtFiles", maxCount: 10 }, { nam
 
 
 
-    console.log('Files:', req.files);         // array of uploaded files
-  console.log('Text fields:', req.body);
+    console.log('Files:', req?.files);         // array of uploaded files
+  console.log('Text fields:', req?.body);
 
-  console.log("Album Art Files:", req.files.albumArtFiles); // array
-    console.log("Press Photos Files:", req.files.artistProfilePhotoFiles); // array
+  console.log("Album Art Files:", req?.files?.albumArtFiles); // array
+    console.log("Press Photos Files:", req?.files?.artistProfilePhotoFiles); // array
 
   let { name, email = "none provided", genre, targetAudience, socialPrescence, uniqueAngles, artistPersonalQuote, offstageDetailOrCause, primaryContactEmail = "none provided", additionalLinks, keyInfluences, biggestMilestones, noticeablePress, upcomingDates, websiteUrl, trackList } = req.body;
 
@@ -493,58 +527,57 @@ console.log("trackList:", trackList);
 name = "Harry Lyon"
 keyInfluences = 'His sound is a combination of all the best facets of pop– from Shawn Mendes’ synthy hooks to ‘80s nostalgia, his music captures the dynamism of indie pop'
 
-let artistProfilePhotoFilesList = []
+if (req?.files?.albumArtFiles || req?.files?.artistProfilePhotoFiles) {
+
+  console.log("either albumArtFiles or artistProfilePhotoFiles exist and have been sent by user, so will now start workflow to extract insight..")
+  
+  let artistProfilePhotoFilesList = []
   let albumArtFilesList = []
 
-  for (const file of req.files.albumArtFiles) {
+  if (req?.files?.albumArtFiles) {
+    for (const file of req.files.albumArtFiles) {
     albumArtFilesList.push(file)
   }
+  console.log("albumArtFilesList is: ", albumArtFilesList);
+  }
 
-  for (const file of req.files.artistProfilePhotoFiles) {
+  if (req?.files?.artistProfilePhotoFiles) {
+    for (const file of req.files.artistProfilePhotoFiles) {
     artistProfilePhotoFilesList.push(file)
   }
-
-  console.log("albumArtFilesList is: ", albumArtFilesList);
   console.log("artistProfilePhotoFilesList is: ", artistProfilePhotoFilesList)
+  }
+  
 
   
 
-  //let formattedTestTrackList = testTrackList.map((title, index) => `Track ${index}: ${title}`).join('\n')
-  if (typeof trackList === 'string') {
-    trackList = JSON.parse(trackList);
-  }
-  let formattedTrackList = trackList.map((title, index) => `Track ${index}: ${title}`).join('\n')
-
-
-
-  console.log("value of formattedTrackList is: ", formattedTrackList)
-
-
-  //1 - extracting image from frontend sent
   
-  //add extraction of album art and artist profile pic
 
-  if (!albumArtFilesList && artistProfilePhotoFilesList) {
-    throw new Error("No uploaded albumArtFiles or artistProfilePhotoFiles found.");
-  }
+  
 
-  //const base64Image = fs.readFileSync(uploadedImagePath, { encoding: 'base64' });
+
+  
 
   let base64ImageURLCollection = []
-
-  /*artistProfilePhotoFilesList.forEach((file) => {
+  
+  if (req?.files?.artistProfilePhotoFiles) {
+  artistProfilePhotoFilesList.forEach((file) => {
     let base64Image = fs.readFileSync(file.path, { encoding: 'base64' });
     base64ImageURLCollection.push(`data:image/jpeg;base64,${base64Image}`)
-  })*/
-  //i'm going to blank this out here, as pictures of images likely affecting album outut
-
+  })
+}
+  if (req?.files?.albumArtFiles) {
   albumArtFilesList.forEach((file) => {
     let base64Image = fs.readFileSync(file.path, { encoding: 'base64' });
     base64ImageURLCollection.push(`data:image/jpeg;base64,${base64Image}`)
   })
+  }
 
   console.log("value of base64ImageURLCollection is: ", base64ImageURLCollection);
-
+  console.log(`${req?.files?.artistProfilePhotoFiles ? "artistProfilePhotoFiles exist, therefore in base64ImageURLCollection": "artistProfilePhotoFiles not provided, therefore not in base64ImageURLCollection"}`)
+  console.log(`${req?.files?.artistProfilePhotoFiles ? "albumArtFiles exist, therefore in base64ImageURLCollection": "albumArtFiles not provided, therefore not in base64ImageURLCollection"}`)
+  
+  
   // Construct the OpenAI message content array
 const imageContentArray = base64ImageURLCollection.map((url) => ({
   type: "image_url",
@@ -556,7 +589,7 @@ const imageContentArray = base64ImageURLCollection.map((url) => ({
 // Add a text prompt at the beginning
 imageContentArray.unshift({
   type: "text",
-  text: `Describe the aesthetics, mood, colors, fashion, and visual style of artist ${name} from these images of their album/albums. The aim is to use your generated specification to create social media assets (images for instagram posts) for the artist.`
+  text: `Describe the aesthetics, mood, colors, fashion, and visual style of artist ${name} in these images. The aim is to use your generated specification to create a logo for the artist.`
 });
 
   //2 - use gpt-vision language model to xtract details from the image:
@@ -575,20 +608,34 @@ imageContentArray.unshift({
   max_tokens: 300
 });
 
-const visionDescriptionForLogo = visionResponse.choices[0].message.content;
+visionDescriptionForLogo = visionResponse.choices[0].message.content;
 console.log("🖼️ Vision insight for logo context:", visionDescriptionForLogo);
 console.log("🖼️ The length of Vision insight for logo context is:", visionDescriptionForLogo.length)
+
+}
+
+
 
 
 let testLyrics = `i try so hard to change for you, but you treat me like a stranger, you talk like I'm a danger. I dont' have to justify the truth, i saw the best in you, there's nothing I can say, I have to walk away, I spent a lot of time stepping away`//get some harry lyon lyrics
 
+//let formattedTestTrackList = testTrackList.map((title, index) => `Track ${index}: ${title}`).join('\n')
+  if (typeof trackList === 'string') {
+    trackList = JSON.parse(trackList);
+  }
+  let formattedTrackList = trackList.map((title, index) => `Track ${index}: ${title}`).join('\n')
+
+
+
+  console.log("value of formattedTrackList is: ", formattedTrackList)
 
 //A short headline (max 6 words), Suggested caption with hashtags
 /* get openai to generate ideas, before feeding ideas below */
 const socialMediaIdeaPrompt = `
 Based only on the following album images and visual description, generate three social media **visual design ideas** for ${name}’s upcoming album in the ${genre} genre.
 
-album images: ${visionDescriptionForLogo}
+${(req?.files?.albumArtFiles || req?.files?.artistProfilePhotoFiles) ? `and info from images provided by artist is: ${visionDescriptionForLogo}`: ""}
+  
 
 **Constraints:**
 - DO NOT include any people or images of Harry Lyon
@@ -619,14 +666,19 @@ console.log("socialMediaIdeaPromptResponse is: ", socialMediaIdeaPromptResponse)
 let options = 3
 let artistLogoOptions = []
 
-let logoPrompt = `You are a social media creator, designing social media posts for ${name}. Using the info from ${visionDescriptionForLogo}, design a social media post for them intended to be posted to instagram.`
+let logoPrompt = `You are a social media creator, designing social media posts for ${name}. Design a social media post for them intended to be posted to instagram.
+
+${(req?.files?.albumArtFiles || req?.files?.artistProfilePhotoFiles) ? `and use info from images provided by artist is: ${visionDescriptionForLogo}`: ""}
+  `
 
 //let socialMediaPrompt = `Using these artist assets (${visionDescriptionForLogo}), generate a captioned Instagram post image that reflect their style, color palette, and genre for ${name}. Do not include people or the artist ${name} in your design. *DO NOT INCLUDE TEXT* ${ genre ? ` take into account ${name}'s ${genre}`: ``}`
 
 
 
 const socialMediaPrompt = `
-Design an abstract, text-free, and faceless image inspired by the visual style of artist ${name}, based on these traits: ${visionDescriptionForLogo} ${testLyrics ? `, and the themes from a sample of his lyrics: ${testLyrics}` : ``}.
+Design an abstract, text-free, and faceless image inspired by the visual style of artist ${name}
+${(req?.files?.albumArtFiles || req?.files?.artistProfilePhotoFiles) ? `, and use info from images provided by artist is: ${visionDescriptionForLogo}`: ""}
+   ${testLyrics ? `, and the themes from a sample of his lyrics: ${testLyrics}` : ``}.
 
 **Hard constraints**:
 - Do NOT include any humans, faces, silhouettes, bodies, or figures.
@@ -778,11 +830,11 @@ app.post("/keywords", upload.fields([{ name: "albumArtFiles", maxCount: 10 }, { 
   
   passThrough.write('data: Pdf pipeline is open!!\n\n');
 
-  console.log('Files:', req.files);         // array of uploaded files
-  console.log('Text fields:', req.body);
+  console.log('Files:', req?.files);         // array of uploaded files
+  console.log('Text fields:', req?.body);
 
-  console.log("Album Art Files:", req.files.albumArtFiles); // array
-    console.log("Press Photos Files:", req.files.artistProfilePhotoFiles); // array
+  console.log("Album Art Files:", req?.files?.albumArtFiles); // array
+    console.log("Press Photos Files:", req?.files?.artistProfilePhotoFiles); // array
 
   let { name, email = "none provided", genre, targetAudience, socialPrescence, uniqueAngles, artistPersonalQuote, offstageDetailOrCause, primaryContactEmail = "none provided", additionalLinks, keyInfluences, biggestMilestones, noticeablePress, upcomingDates, websiteUrl, trackList } = req.body;
 
